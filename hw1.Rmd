@@ -1,0 +1,52 @@
+---
+title: "homework1"
+author: "陳羽渢/B04703090/財金二"
+date: "3/24/2017"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setlocale(locale = "zh_TW.UTF-8")
+```
+
+
+```{r}
+
+students.bin<-readBin("students.csv",what="raw",n=file.info("students.csv")$size)
+library(stringi)
+students.txt <- stri_encode(students.bin, "BIG-5", "UTF-8")
+students<-read.table(textConnection(students.txt,encoding = "UTF-8"),sep = ",",header = TRUE)
+library(knitr)
+kable(students)
+```
+
+## 第一題
+請算出你所屬學院的歷年學生人數最大值、最小值及中位數，並將三者存成一個向量表達，此外請為向量元素分別命名為maximum、minimum及median。
+
+```{r}
+answer1<-c(maxmium=max(students$管理學院),minium=min(students$管理學院),median=median(students$管理學院))
+answer1
+```
+
+## 第二題
+請從資料中取出社科院、文學院、工學院及管理學院從2001到2015年的學生人數資料，並存取 為一個data.frame，並請記得為欄位命名正確學院名稱，並用kable函數展示出來。
+
+```{r}
+answer2<-students[c(57:71),c("年度","社科院","文學院","工學院","管理學院")]
+rownames(answer2)<-NULL
+kable(answer2 )
+```
+
+## 第三題
+承上題，請計算四個學院從2001年到2015年各年學生加總人數及各年四學院的平均人數，並以data.frame的形式呈現（請用kable函數展示)。data.frame需包含年度(請照年度順序)、四學院學生人數各年加總及平均。
+
+```{r}
+answer2[,6]<-c(answer2[,2]+answer2[,3]+answer2[,4]+answer2[,5])
+answer2[,7]<-c(answer2[,6]/4)
+colnames(answer2)<-c("年度","社科院","文學院","工學院","管理學院","總計","平均")
+answer3<-answer2
+kable(answer3)
+
+```
