@@ -1,0 +1,41 @@
+---
+title: "homework 3"
+author: "陳羽渢/B04703090/財金二"
+date: "4/26/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setlocale(locale = "zh_TW.UTF-8")
+```
+#台大與他校師資學歷比較
+我們討論的主題是台大與其他大學預算、支出的比較，影響支出的原因有很多，其中一個為教授薪水支出，於是我們就想到通常學歷越高的教授薪水理應最高，因此如果一間學校擁有的高學歷教授越多，所需要的師資支出就會越高，於是我整理了各校師資學歷，待之後與各校師資支出，看兩者是否真的有關聯。
+從下圖可看出台大的教師資源明顯的比他校來的許多，除此之外值得關注的是後段的國立大學師資竟然比私立大學來得差，那究竟他們的師資支出關係又是怎樣呢。
+```{r}
+library(ggplot2)
+library(plotly)
+require(stats)
+raw.data<-read.csv(file="academic.csv",encoding = "UTF-8",sep = ",",header = TRUE)
+#NerTbale is as follows:
+#SchoolName,total.number,	doctor.number	,master.number,	bechelor.number,	other.number
+#NTU,	2,066	, 1,926 ,	71 ,	69 ,	0
+allType<-names(raw.data)
+typeId<-c(2:6)
+newTable<-data.frame()
+for(nid in c(1:20))
+{
+  UniversityName <- as.matrix(rep(raw.data$UniversityName[nid], length(raw.data[nid,typeId])))
+  people <- as.matrix(as.numeric(raw.data[nid,typeId]))
+  type <- as.matrix(as.character(allType[typeId]))
+  temp <- cbind(UniversityName, people, type)
+  newTable <- rbind(newTable, temp)
+  }
+names(newTable) <- c("UniversityName", "people", "pos")
+newTable <- newTable[with(newTable, order(pos)),]
+p <- plot_ly(data = newTable, x = ~UniversityName, 
+             y = ~people, color = ~pos) %>%
+  add_lines( yaxis = list(range = c(0,6))) 
+ 
+p
+```
