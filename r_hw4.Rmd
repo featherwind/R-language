@@ -1,0 +1,239 @@
+---
+title: "homework4"
+author: "陳羽渢/B04703090/財金二"
+date: "5/16/2017"
+output: html_document
+---
+#高中生體適能（柔軟度、肌耐力、瞬發力、心肺耐力）各項間的關係
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setlocale(category = "LC_ALL", locale = "zh_TW.UTF-8")
+```
+
+```{r}
+#載入套件
+library(knitr)
+library(ggplot2)
+library(coefplot)
+require(lattice)
+require(MASS)
+require(heplots)
+require(corrplot)
+require(effects)
+library(lm.beta)
+```
+
+```{}
+(一) 金牌者係指達常模百分等級85以上者。
+(二) 銀牌者係指達常模百分等級75以上者。
+(三) 銅牌者係指達常模百分等級50以上者。
+(四) 中等者係指達常模百分等級25以上者。
+(五) 待加強者係指落於常模百分等級24以下者。
+```
+
+```{r}
+#為了消除各縣市人數的差異，我們只採用比例來看
+#讀取資料、預覽
+
+raw<-read.table(file="sport103 2.csv",encoding = "big5",sep = ",",header = TRUE)
+kable(head(raw,3))
+#轉換成可用的形式
+allType<-names(raw)
+typeId<-c(3:27)
+newTable<-data.frame()
+for(nid in c(1:44))
+{
+  city <- as.matrix(rep(raw$縣市[nid], length(raw[nid,typeId])))
+  gender <- as.matrix(rep(raw$性別[nid], length(raw[nid,typeId])))
+  percentage <- as.matrix(as.numeric(raw[nid,typeId]))
+  type <- as.matrix(as.character(allType[typeId]))
+  temp <- cbind(city, gender,percentage, type)
+  newTable <- rbind(newTable, temp)
+}
+names(newTable) <- c("city","gender", "percentage", "type")
+#將percentage轉為數值
+newTable$percentage<-as.numeric(as.character(newTable$percentage))
+kable(head(newTable,3))
+
+```
+
+```{r}
+#取出各項目金牌的比率做觀察
+a<-newTable[type=="柔軟度金牌比率",]
+a$type<-c("soft")
+b<-newTable[type=="肌耐力金牌比率",]
+b$type<-c("muscle.endurance")
+c<-newTable[type=="瞬發力金牌比率",]
+c$type<-c("explode")
+d<-newTable[type=="心肺耐力金牌比率",]
+d$type<-c("endurance")
+goldmedal<-rbind(a,b,c,d)
+
+ggplot(data = goldmedal, aes(x = type, y = percentage)) + geom_boxplot() + coord_flip() +
+ labs( y = 'percentage', x = 'type', 
+       title = 'gold medal') 
+
+```
+
+```{r}
+#進一步加上信賴區間來看他們之間的關係
+ggplot(data = goldmedal, 
+       aes(x = type, y = percentage)) +
+  stat_summary(fun.data = 'mean_cl_boot', size = 1) +
+  geom_hline(yintercept = mean(goldmedal$percentage) , 
+             linetype = 'dotted') +
+  labs(x = 'type', y = 'percentage') +
+  coord_flip()
+```
+我們可以發現到肌耐力獲得金牌的比例明顯較其他三者來得高，而柔軟度則是相對較少的。另外，我們可以發現爆發力跟心肺耐力的比例相當接近，因此進一步比較這兩者之間是否有所關聯。我想接著探討哪些會影響爆發力。
+```{r}
+#重新整理表單形式
+a1<-newTable[type=="瞬發力金牌比率",]
+a1$type<-c("explode")
+a1<-cbind(a1,medal=c("gold"))
+a2<-newTable[type=="瞬發力銀牌比率",]
+a2$type<-c("explode")
+a2<-cbind(a2,medal=c("silver"))
+a3<-newTable[type=="瞬發力銅牌比率",]
+a3$type<-c("explode")
+a3<-cbind(a3,medal=c("copper"))
+a4<-newTable[type=="瞬發力中等比率",]
+a4$type<-c("explode")
+a4<-cbind(a4,medal=c("middle"))
+a5<-newTable[type=="瞬發力待加強比率",]
+a5$type<-c("explode")
+a5<-cbind(a5,medal=c("more effort"))
+b1<-newTable[type=="心肺耐力金牌比率",]
+b1$type<-c("endurance")
+b2<-newTable[type=="心肺耐力銀牌比率",]
+b2$type<-c("endurance")
+b3<-newTable[type=="心肺耐力銅牌比率",]
+b3$type<-c("endurance")
+b4<-newTable[type=="心肺耐力中等比率",]
+b4$type<-c("endurance")
+b5<-newTable[type=="心肺耐力待加強比率",]
+b5$type<-c("endurance")
+c1<-newTable[type=="肌耐力金牌比率",]
+c1$type<-c("muscle.endurance")
+c2<-newTable[type=="肌耐力銀牌比率",]
+c2$type<-c("muscle.endurance")
+c3<-newTable[type=="肌耐力銅牌比率",]
+c3$type<-c("muscle.endurance")
+c4<-newTable[type=="肌耐力中等比率",]
+c4$type<-c("muscle.endurance")
+c5<-newTable[type=="肌耐力待加強比率",]
+c5$type<-c("muscle.endurance")
+d1<-newTable[type=="柔軟度金牌比率",]
+d1$type<-c("soft")
+d2<-newTable[type=="柔軟度銀牌比率",]
+d2$type<-c("soft")
+d3<-newTable[type=="柔軟度銅牌比率",]
+d3$type<-c("soft")
+d4<-newTable[type=="柔軟度中等比率",]
+d4$type<-c("soft")
+d5<-newTable[type=="柔軟度待加強比率",]
+d5$type<-c("soft")
+compare1<-rbind(a1,a2,a3,a4,a5)
+compare2<-rbind(b1,b2,b3,b4,b5)
+compare2<-compare2[,3:4]
+compare3<-rbind(c1,c2,c3,c4,c5)
+compare3<-compare3[,3:4]
+compare4<-rbind(d1,d2,d3,d4,d5)
+compare4<-compare4[,3:4]
+compare<-cbind(compare1,compare2,compare3,compare4)
+colnames(compare)<-c("city","gender","percentage1","type1","medal","percentage2"," type2","percentage3"," type3","percentage4"," type4")
+#不同級別與瞬發力影響
+anova(m1 <- lm(percentage1 ~ medal, data = compare))
+```
+
+```{r}
+#比較瞬發力和心肺耐力
+ggplot(data = compare, 
+  aes( y = percentage1, x = percentage2)) +
+  geom_point() +
+  stat_smooth(method = 'lm', se = F)
+```
+
+從整體的散佈圖來看兩者之間的確存在一定的關係，那麼各個牌別的分佈又是如何，所以我們接著將其分開看
+```{r}
+#各級別瞬發力和心肺耐的關係
+ggplot(data = compare, 
+  aes(group = medal, 
+    y = percentage1, x = percentage2)) +
+  geom_point() +
+  stat_smooth(method = 'lm', se = F)+
+  facet_grid( .~ medal) +
+  labs(x = 'endurance', y = 'explode')
+```
+我們可以發現除了待努力之外，其他級別的相關性（斜率）是差不多的
+```{r}
+# anova檢定 （瞬發力和心肺耐力）
+#將心肺耐力加進模型
+anova(m2 <- update(m1, . ~ . + 
+            percentage2, data = compare))
+#或許不是級別而是心肺耐力造成瞬發力不同
+anova(m3 <- update(m2, . ~ . - 
+            medal,  data = compare))
+#將結果放在一個list中
+res_lm <- lapply(list(m1, m2, m3), summary)
+#比較在控制心肺耐力下，級別影響瞬發力的效果
+(res_lm[[2]]$r.sq - res_lm[[3]]$r.sq)/res_lm[[2]]$r.sq
+anova(m3, m2)
+#比較在控制級別下，心肺耐力影響瞬發力的效果
+(res_lm[[2]]$r.sq - res_lm[[1]]$r.sq)/res_lm[[1]]$r.sq
+anova(m1, m2)
+```
+分別控制級別與心肺耐力跑Anova，可看出統計顯著排除心肺耐力與瞬發力相同，但無法拒絕級別與瞬發力
+```{r}
+#畫效果
+#將截距去除
+m2 <- lm(percentage1 ~ percentage2+medal-1, 
+  data = compare)
+coefplot(m2, xlab = 'residual', ylab = 'regression variable', title = 'reaction variable = explode')
+#把資料與迴歸分析的預測值、殘差與影響度放進資料
+fit_m2 <- data.frame(compare[, c(3, 5, 6)], fitted = fitted(m2), resid = resid(m2),
+  infl = influence(m2)$hat )
+#疊合真實觀測值預測值的直方圖，依級別
+ggplot(data = fit_m2, aes(x = percentage2, group = medal )) +
+  stat_density(geom = 'path', position = 'identity')  +
+  
+  stat_density(geom = 'path', position = 'identity', aes(x = fitted))+
+  geom_vline(xintercept = c(with(compare, tapply(percentage1,medal, mean))), linetype = 'dotted')+
+  facet_grid(medal ~ .) +
+  labs(x = 'explode', y = 'probability density')
+#看看殘差的 Q-Q 圖，依級別。檢視常態假設
+
+qqmath(~ scale(resid) | medal, data = fit_m2, type = c('p', 'g', 'r'),xlab = 'normal digit', ylab = 'standard residual', layout= c(2, 3),pch = '.', cex = 2)
+#畫預測值與殘差的散佈圖，檢查線性與等分散假設
+
+ggplot(data = fit_m2, aes(x = fitted, y = scale(resid), group = medal )) +
+  geom_point(pch = 20, size = 1) +
+  stat_smooth(method = 'rlm', se = F) +
+  facet_grid(medal ~ .) +
+  labs(x = 'predict explode', y = 'standard residual')
+#底下要呈現多個連續解釋變項時的情形
+#看看四個指標之間的關聯，先取出分別的資料
+related<-compare[c("percentage1","percentage2","percentage3","percentage4")]
+colnames(related)<-c("explode","endurance","muscle.endurance","soft")
+#呈現兩兩散佈圖
+
+scatterplotMatrix(~ explode+endurance+muscle.endurance+soft,data=related,pch = '.', cex = 3, smooth = FALSE, reg.line = FALSE, ellipse = TRUE,diagonal = 'none',lower.panel = NULL)
+corrplot(cor(related), method = 'ellipse', order = 'hclust', addrect = 4,type = 'upper', tl.pos = 'tp')
+corrplot(cor(related), add = TRUE, type = 'lower', method = 'number',
+  order = 'hclust', col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
+```
+由上表可以發現各項指標幾乎都是息息相關的，尤其是肌耐力與瞬發力的關係最為顯著，令人意外的是，柔軟度與瞬發力相關性也不小，但其與其他兩者相關性就較小
+```{r}
+#放進三個解釋變項
+summary(m4 <- lm(explode~endurance+muscle.endurance+soft,data=related))
+#看效果
+coefplot(m4, predictors = c("endurance","muscle.endurance","soft"),
+  xlab = 'predict', ylab = 'regression variable', title = 'reaction variable = explode')
+#看效果(計算標準化迴歸係數)
+plot(allEffects(m4), main = '', grid = T)
+summary(lm.beta(m4))
+
+```
+肌耐力跟柔軟度都統計顯著會影響瞬發力，而心肺耐力在這裡則無顯著性說明他們是否相互影響。要有好的瞬發力就要有好的肌耐力，這應該是蠻直觀的想法，但柔軟度呢？這有待探討。
+
+
