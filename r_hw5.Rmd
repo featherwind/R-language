@@ -1,0 +1,159 @@
+---
+title: "homework5"
+author: "陳羽渢/B04703090/財金二"
+date: "5/24/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+Sys.setlocale(locale = "zh_TW.UTF-8")
+```
+```
+我想要透過ptt的星座版(Astrology)來看看哪些星座或哪些主題較常被討論
+```
+```{r}
+library(tmcn)
+library(rvest)
+library(NLP)
+library(tm)
+library(jiebaRD)
+library(jiebaR)
+library(RColorBrewer)
+library(wordcloud)
+library(SnowballC)
+```
+
+```{r}
+setwd("~/Documents/大二下/資料科學/hw5/ptt")
+rm(list=ls(all.names = TRUE))
+pttTestFunction <- function(URL, filename)
+{
+URL   = "https://www.ptt.cc/bbs/Zastrology/index.html"
+html  = read_html(URL)
+title = html_nodes(html, "a")
+href  = html_attr(title, "href")
+data = data.frame(title = toUTF8(html_text(title)),
+                  href = href)
+data = data[-c(1:10),]
+getContent <- function(x) {
+  url  = paste0("https://www.ptt.cc", x)
+  tag  = html_node(read_html(url), 'div#main-content.bbs-screen.bbs-content')
+  text = toUTF8(html_text(tag))
+}
+allText = sapply(data$href, getContent)
+
+write.table(allText, filename) 
+}
+id = c(1:100)
+URL = paste0("https://www.ptt.cc/bbs/Zastrology/index", id, ".html")
+filename = paste0(id, ".txt")
+pttTestFunction(URL[1], filename[1])
+mapply(pttTestFunction, 
+       URL = URL, filename = filename)
+#wordcloud
+
+filenames <- list.files(getwd(), pattern="*.txt")
+files <- lapply(filenames, readLines)
+docs <- Corpus(VectorSource(files))
+toSpace <- content_transformer(function(x, pattern) {
+  return (gsub(pattern, " ", x))
+}
+)
+docs <- tm_map(docs, toSpace, "推")
+docs <- tm_map(docs, toSpace, "※")
+docs <- tm_map(docs, toSpace, "→")
+docs <- tm_map(docs, toSpace, "】")
+docs <- tm_map(docs, toSpace, "【")
+docs <- tm_map(docs, toSpace, "☆")
+docs <- tm_map(docs, toSpace, "★ ")
+docs <- tm_map(docs, toSpace, "的")
+docs <- tm_map(docs, toSpace, "你")
+docs <- tm_map(docs, toSpace, "是")
+docs <- tm_map(docs, toSpace, "會")
+docs <- tm_map(docs, toSpace, "有")
+docs <- tm_map(docs, toSpace, "了")
+docs <- tm_map(docs, toSpace, "pttcc")
+docs <- tm_map(docs, removePunctuation)
+docs <- tm_map(docs, removeNumbers)
+docs <- tm_map(docs, stripWhitespace)
+docs <- tm_map(docs, stemDocument)
+docs <- tm_map(docs, function(word) {gsub("[A-Za-z0-9]", "",word)}) 
+mixseg = worker()
+jieba_tokenizer=function(d){
+  unlist(segment(d[[1]],mixseg))
+}
+seg = lapply(docs, jieba_tokenizer)
+freqFrame = as.data.frame(table(unlist(seg)))
+par(family=("Heiti TC Light"))
+wordcloud(freqFrame$Var1,freqFrame$Freq,
+          scale=c(5,0.1),min.freq=50,max.words=125,
+          random.order=TRUE, random.color=FALSE,
+          rot.per=.1, colors=brewer.pal(5, "Dark2"),
+          ordered.colors=FALSE,use.r.layout=F,
+          fixed.asp=TRUE)
+
+```
+效果不如預期，可能是因為星座名稱在一篇文章被提及的次數仍然是相對少數，而主題更是難以從詞彙中看出。從上圖只能看出巨蟹座最常被提及，可能最常被討論的主題是與感情(朋友、關係、感情)相關。
+```
+接著我試著爬看看其他的網站，看看有沒有類似的情形，我選擇了Dcard(匿名社群)的星座版，不過他與ptt的運作模式有所不同，他不是一頁一頁的，而且太舊的資料會被隱藏，我努力嘗試還是只能抓出星座版中最熱門的三十筆資料，所以以下也只呈現這三十筆資料
+```
+```{r}
+rm(list=ls(all.names = TRUE))
+setwd("~/Documents/大二下/資料科學/hw5/dcard")
+URL <- "https://www.dcard.tw/f/horoscopes"
+html  <- read_html(URL)
+title <- html_nodes(html, "strong")
+title <- title[-(1:4)]
+Href<- html_nodes(html, "a")
+href <- html_attr(Href,"href")
+href <- href[-(1:225)]
+href <- href[-(31:35)]
+data <- data.frame(title = html_text(title),
+                  href = href)
+getContent <- function(x) {
+  url  <- paste0("https://www.dcard.tw", x)
+  tag  <- html_nodes(read_html(url), "div.Post_content_1xpMb")
+  text <- html_text(tag)
+}
+allText <- sapply(data$href, getContent)
+write.table(allText, "mydata.txt")
+#wordcloud
+filenames <- list.files(getwd(), pattern="*.txt")
+files <- lapply(filenames, readLines)
+docs <- Corpus(VectorSource(files))
+toSpace <- content_transformer(function(x, pattern) {
+  return (gsub(pattern, " ", x))
+})
+docs <- tm_map(docs, toSpace, "的")
+docs <- tm_map(docs, toSpace, "你")
+docs <- tm_map(docs, toSpace, "是")
+docs <- tm_map(docs, toSpace, "會")
+docs <- tm_map(docs, toSpace, "有")
+docs <- tm_map(docs, toSpace, "了")
+docs <- tm_map(docs, toSpace, "我")
+docs <- tm_map(docs, toSpace, "他")
+docs <- tm_map(docs, toSpace, "我們")
+docs <- tm_map(docs, toSpace, "很")
+docs <- tm_map(docs, toSpace, "都")
+docs <- tm_map(docs, toSpace, "就")
+docs <- tm_map(docs, toSpace, "不")
+docs <- tm_map(docs, removePunctuation)
+docs <- tm_map(docs, removeNumbers)
+docs <- tm_map(docs, function(word) {gsub("[A-Za-z0-9]", "",word)}) 
+docs <- tm_map(docs, stripWhitespace)
+docs <- tm_map(docs, stemDocument)
+mixseg = worker()
+jieba_tokenizer=function(d){
+  unlist(segment(d[[1]],mixseg))
+}
+seg = lapply(docs, jieba_tokenizer)
+freqFrame = as.data.frame(table(unlist(seg)))
+par(family=("Heiti TC Light"))
+wordcloud(freqFrame$Var1,freqFrame$Freq,
+          scale=c(5,0.1),min.freq=10,max.words=150,
+          random.order=TRUE, random.color=FALSE,
+          rot.per=.1, colors=brewer.pal(5, "Dark2"),
+          ordered.colors=FALSE,use.r.layout=FALSE,
+          fixed.asp=TRUE)
+```
+我們可看到當中最常被討埨的是水瓶座其次是獅子，而從「喜歡」、「朋友」等詞可以猜測主題多與愛情、友情有關與ptt相同。
